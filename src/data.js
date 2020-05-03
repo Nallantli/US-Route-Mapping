@@ -319,7 +319,7 @@ function scale(upper_x, lower_x) {
     return d;
 }
 
-var pathWorker = new Worker('worker.js');
+var pathWorker = new Worker('src/worker.js');
 
 pathWorker.addEventListener('message', function(e) {
     console.log(e.data);
