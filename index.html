@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="named-places.js"></script>
+    <script type="text/javascript" src="autocomplete.js"></script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <canvas id="map-canvas"></canvas>
+    <div id="navbar">
+        <form autocomplete="off">
+            <div class="autocomplete" style="width:300px;">
+                <input id="a_input" type="text" name="CityA" placeholder="Start City">
+            </div>
+            <div class="autocomplete" style="width:300px;">
+                <input id="b_input" type="text" name="CityB" placeholder="Final City">
+            </div>
+        </form>
+        <div class="autocomplete" style="width:300px;">
+            <button id="findpath" onclick="onClick()">Submit</button>
+        </div>
+        <div id="sig"></div>
+        <div id="path"></div>
+    </div>
+</body>
+
+<script type="text/javascript" src="data.js"></script>
+
+</html>
