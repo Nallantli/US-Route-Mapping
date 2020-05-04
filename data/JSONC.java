@@ -30,7 +30,7 @@ public class JSONC {
 				String lon = sanitize(line.substring(90, 101));
 				String inter = sanitize(line.substring(101, 106));
 				String dist = sanitize(line.substring(106));
-				if (!state.equals("AK") && !state.equals("HI") && !state.equals("PR"))
+				//if (!state.equals("AK") && !state.equals("HI") && !state.equals("PR"))
 					places.add(new PlaceObj(unique, state, name, population, area, lat, lon, inter, dist));
 			}
 			br.close();
@@ -44,10 +44,10 @@ public class JSONC {
 				String lon = sanitize(line.substring(0, 9));
 				String lat = sanitize(line.substring(9, 19));
 				String state = sanitize(line.substring(28, 30));
-				if (!state.equals("AK") && !state.equals("HI") && !state.equals("PR")) {
+				//if (!state.equals("AK") && !state.equals("HI") && !state.equals("PR")) {
 					intersections.put(id, new Intersection(Integer.toString(id), state, lon, lat, raw_c));
 					raw_c++;
-				}
+				//}
 				id++;
 			}
 			br.close();

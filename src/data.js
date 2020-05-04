@@ -50,8 +50,8 @@ autocomplete(document.getElementById("a_input"), Object.keys(CITIES));
 autocomplete(document.getElementById("b_input"), Object.keys(CITIES));
 
 offset_z = Math.floor(scale(upper_x * DPI, lower_x * DPI));
-offset_x = -(lower_x);
-offset_y = -(upper_y);
+offset_x = 130;
+offset_y = -50;
 
 console.log(lower_y);
 console.log(upper_y);
@@ -361,7 +361,7 @@ for (var i = 20; i <= 200; i++) {
             if (cache[offset_z][x] !== undefined) {
                 for (var y = min_q_y; y >= max_q_y; y--) {
                     if (cache[offset_z][x][y] !== undefined) {
-                        if (cache[offset_z][x][y] === 0 && zdirection == 0 && xdirection == 0 && ydirection == 0 && Math.abs(scrollz) < 0.5) {
+                        if (cache[offset_z][x][y] === 0 && zdirection == 0 && Math.abs(scrollz) < 0.5) {
                             cache[offset_z][x][y] = 1;
                             prerenderMap(offset_z, x, y);
                         }
