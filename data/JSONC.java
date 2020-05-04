@@ -1,3 +1,5 @@
+package data;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -15,7 +17,7 @@ public class JSONC {
 			ArrayList<Road> roads = new ArrayList<Road>();
 
 			System.out.println("Loading Places...");
-			File f = new File("named-places.txt");
+			File f = new File("data/named-places.txt");
 			BufferedReader br = new BufferedReader(new FileReader(f));
 			String line;
 			while ((line = br.readLine()) != null) {
@@ -34,7 +36,7 @@ public class JSONC {
 			br.close();
 
 			System.out.println("Loading Intersections...");
-			f = new File("intersections.txt");
+			f = new File("data/intersections.txt");
 			br = new BufferedReader(new FileReader(f));
 			int id = 0;
 			int raw_c = 0;
@@ -51,7 +53,7 @@ public class JSONC {
 			br.close();
 
 			System.out.println("Loading Roads...");
-			f = new File("connections.txt");
+			f = new File("data/connections.txt");
 			br = new BufferedReader(new FileReader(f));
 			while ((line = br.readLine()) != null) {
 				String[] split = line.split("\s");

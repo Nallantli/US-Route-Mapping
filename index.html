@@ -13,7 +13,10 @@
 
 <body>
     <canvas id="map-canvas"></canvas>
-    <div id="navbar">
+    <div id="navbar" class="hidden">
+        <div id="pullout">
+            <button id="navbutton" onclick="pulloutNav()">⇐</button>
+        </div>
         <form autocomplete="off">
             <div class="autocomplete" style="width:300px;">
                 <input id="a_input" type="text" name="CityA" placeholder="Start City">

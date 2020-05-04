@@ -19,18 +19,52 @@ body {
     left: 0;
     display: block;
     height: 100%;
-    width: calc(100% - 300px);
+    width: 100%;
+}
+
+.hidden {
+    right: -300px;
+}
+
+.shown {
+    right: 0px;
 }
 
 #navbar {
     top: 0;
-    left: calc(100% - 300px);
     position: absolute;
     display: block;
-    height: 100vh;
+    height: 100%;
     width: 300px;
     background-color: #121212;
-    overflow: hidden;
+    border-left: 1px solid;
+    transition: right ease-in-out .25s;
+}
+
+form {
+    margin-top: -30px;
+}
+
+#pullout {
+    position: relative;
+    display: block;
+    height: 30px;
+    width: 30px;
+    right: 30px;
+    top: 0;
+    background-color: #121212;
+    justify-content: center;
+    border-color: #ffffff;
+    border-bottom: 1px solid;
+    border-left: 1px solid;
+}
+
+#navbutton {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #ffffff;
+    margin: none;
 }
 
 #path {
