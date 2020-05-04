@@ -137,8 +137,10 @@ document.addEventListener('mousemove', function(evt) {
     MOUSE_POS.y = mousePos.y;
 });
 
-async function prerenderMap(offset_z, raw_x, raw_y) {
+function prerenderMap(offset_z, raw_x, raw_y) {
     setTimeout(() => {
+        var flag = false;
+
         var q_lon = raw_x * 10;
         var q_lat = raw_y * 10;
         //console.log("Generating (" + q_lon + ", " + q_lat + ", Z:" + offset_z + ")");
@@ -153,6 +155,7 @@ async function prerenderMap(offset_z, raw_x, raw_y) {
             var n_lon = parseFloat(node.lon);
             var n_lat = parseFloat(node.lat);
             if (n_lon > q_lon && n_lon < q_lon + 10 && n_lat > q_lat && n_lat < q_lat + 10) {
+                flag = true;
                 var x = translateX(n_lon - q_lon, offset_z);
                 var y = translateY(n_lat - q_lat, offset_z);
                 for (n in node.neighbors) {
@@ -182,6 +185,7 @@ async function prerenderMap(offset_z, raw_x, raw_y) {
             var o_lon = parseFloat(o.lon);
             var o_lat = parseFloat(o.lat);
             if (o_lon > q_lon && o_lon < q_lon + 10 && o_lat > q_lat && o_lat < q_lat + 10) {
+                flag = true;
                 var scale = ((o.pop + MAX_POP) / (MAX_POP + MAX_POP)) / 2;
                 var size = Math.sqrt(Math.sqrt(scale) * offset_z * 0.001 * DPI);
                 if (size >= 0.5) {
@@ -194,7 +198,10 @@ async function prerenderMap(offset_z, raw_x, raw_y) {
             }
         }
 
-        cache[offset_z][raw_x][raw_y] = canvas;
+        if (flag)
+            cache[offset_z][raw_x][raw_y] = canvas;
+        else
+            cache[offset_z][raw_x][raw_y] = null;
     }, 0);
 }
 
@@ -264,27 +271,21 @@ for (var i = 20; i <= 200; i++) {
                 if (cache[offset_z][x] !== undefined) {
                     for (var y = min_q_y; y >= max_q_y; y--) {
                         if (cache[offset_z][x][y] !== undefined) {
-                            //if (cache[offset_z][x][y] === 1) {
-                            //console.log("Replacing", offset_z, x, y);
-                            var nearest = 0;
-                            var dist = 99999;
-                            for (var i in cache) {
-                                if (Math.abs(i - offset_z) < dist && cache[i][x][y] !== 0 && cache[i][x][y] !== 1 && cache[i][x][y] !== undefined) {
-                                    nearest = i;
-                                    dist = Math.abs(i - offset_z);
+                            if (cache[offset_z][x][y] !== null) {
+                                var nearest = 0;
+                                var dist = 99999;
+                                for (var i in cache) {
+                                    if (Math.abs(i - offset_z) < dist && cache[i][x][y] !== 0 && cache[i][x][y] !== 1 && cache[i][x][y] !== undefined && cache[i][x][y] !== null) {
+                                        nearest = i;
+                                        dist = Math.abs(i - offset_z);
+                                    }
                                 }
+                                if (nearest != 0) {
+                                    ctx.drawImage(cache[nearest][x][y], translateX(offset_x + x * 10, offset_z), translateY(offset_y + y * 10, offset_z), translateX(10, offset_z), translateY(10, offset_z));
+                                }
+                            } else {
+                                // no places or nodes inside this chunk
                             }
-                            //ctx.fillStyle = "#0000dd";
-                            //ctx.fillRect(translateX(offset_x + x * 10, offset_z), translateY(offset_y + y * 10, offset_z), translateX(10, offset_z), translateY(10, offset_z));
-                            try {
-                                ctx.drawImage(cache[nearest][x][y], translateX(offset_x + x * 10, offset_z), translateY(offset_y + y * 10, offset_z), translateX(10, offset_z), translateY(10, offset_z));
-                            } catch (err) {
-                                //console.log("Tried Replacing", offset_z, x, y, "with", nearest);
-                                //console.log(err);
-                            }
-                            // } else if (cache[offset_z][x][y] !== 0) {
-                            //    ctx.drawImage(cache[offset_z][x][y], translateX(offset_x + x * 10, offset_z), translateY(offset_y + y * 10, offset_z));
-                            // }
                         }
                     }
                 }
@@ -333,22 +334,17 @@ for (var i = 20; i <= 200; i++) {
             labelText(CITIES[city_b].lon, CITIES[city_b].lat, city_b);
         }
 
-        ctx.scale(1, -1);
         var lon = (MOUSE_POS.x / offset_z) - offset_x;
         var lat = -((MOUSE_POS.y / offset_z) + offset_y);
         var closest = getClosest(lon, lat);
         var label = closest.name + ", " + closest.state;
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(MOUSE_POS.x, MOUSE_POS.y - 22, ctx.measureText(label).width + 10, 22);
-        ctx.fillStyle = "#333";
-        ctx.fillRect(MOUSE_POS.x + 1, MOUSE_POS.y - 21, ctx.measureText(label).width + 8, 20);
-        ctx.fillStyle = "#fff";
-        ctx.fillText(label, MOUSE_POS.x + 5, MOUSE_POS.y - 5);
-        ctx.scale(1, -1);
+
         ctx.fillStyle = "#6666ff";
         ctx.beginPath();
         ctx.arc(translateX(parseFloat(closest.lon) + offset_x, offset_z), translateY(parseFloat(closest.lat) + offset_y, offset_z), offset_z / 20, 0, Math.PI * 2);
         ctx.fill();
+
+        labelText(closest.lon, closest.lat, label);
     }
 
     var min_q_x = Math.floor((min_lon) / 10);
