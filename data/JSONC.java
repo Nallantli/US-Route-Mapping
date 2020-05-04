@@ -77,7 +77,7 @@ public class JSONC {
 			}
 
 			System.out.println("Printing Places to File...");
-			BufferedWriter bw = new BufferedWriter(new FileWriter(new File("named-places.js")));
+			BufferedWriter bw = new BufferedWriter(new FileWriter(new File("data.js")));
 			bw.write("const PLACES = [\n");
 			places.remove(0);
 			for (PlaceObj o : places) {
