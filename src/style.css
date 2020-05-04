@@ -23,40 +23,45 @@ body {
 }
 
 .hidden {
-    right: -300px;
+    width: 0;
+}
+
+.hidden-b {
+    right: 0;
 }
 
 .shown {
-    right: 0px;
+    width: 300px;
+}
+
+.shown-b {
+    right: 300px;
 }
 
 #navbar {
+    right: 0;
     top: 0;
     position: absolute;
+    overflow: hidden;
     display: block;
     height: 100%;
-    width: 300px;
     background-color: #121212;
     border-left: 1px solid;
-    transition: right ease-in-out .25s;
-}
-
-form {
-    margin-top: -30px;
+    transition: all ease-in-out .25s;
 }
 
 #pullout {
-    position: relative;
+    position: absolute;
     display: block;
     height: 30px;
     width: 30px;
-    right: 30px;
     top: 0;
     background-color: #121212;
     justify-content: center;
     border-color: #ffffff;
     border-bottom: 1px solid;
     border-left: 1px solid;
+    transition: all ease-in-out .25s;
 }
 
 #navbutton {
@@ -65,6 +70,7 @@ form {
     font-size: 20px;
     color: #ffffff;
     margin: none;
+    width: 100%;
 }
 
 #path {

@@ -438,13 +438,18 @@ function onClick() {
 
 function pulloutNav() {
     var navbar = document.getElementById("navbar");
+    var navbutton = document.getElementById("pullout");
     if (navbar.classList.contains("hidden")) {
         navbar.classList.remove("hidden");
         navbar.classList.add("shown");
+        navbutton.classList.remove("hidden-b");
+        navbutton.classList.add("shown-b");
         document.getElementById("navbutton").innerHTML = "⇒";
     } else {
         navbar.classList.remove("shown");
         navbar.classList.add("hidden");
+        navbutton.classList.remove("shown-b");
+        navbutton.classList.add("hidden-b");
         document.getElementById("navbutton").innerHTML = "⇐";
     }
 }
