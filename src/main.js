@@ -11,24 +11,26 @@ var MAX_POP = 0;
 var MIN_POP = 9999;
 var MOUSE_POS = { x: 0, y: 0 };
 var OLD_MOUSE_POS = { x: 0, y: 0 };
+const chunk_size = 5;
 
-var city_a = null;
-var city_b = null;
+let city_a = null;
+let city_b = null;
 var selected_roads = [];
+var renderQueue = [];
 
-var CITIES = {};
+const CITIES = {};
 
-let c = document.getElementById('map-canvas');
+const c = document.getElementById('map-canvas');
 c.width = w_width * DPI;
 c.height = w_height * DPI;
-let ctx = c.getContext("2d", { alpha: false });
+const ctx = c.getContext("2d", { alpha: false });
 ctx.font = "1em Arial";
 ctx.scale(DPI, -DPI);
 
-var lower_y = 99999;
-var upper_y = -99999;
-var lower_x = 99999;
-var upper_x = -99999;
+let lower_y = 99999;
+let upper_y = -99999;
+let lower_x = 99999;
+let upper_x = -99999;
 
 for (var i = 0; i < PLACES.length; i++) {
     var o = PLACES[i];
@@ -65,7 +67,7 @@ let ydirection = 0; // -1 up, 1 down
 let zdirection = 0; // -1 up, 1 down
 let scrollz = 0;
 
-var myTarget;
+let myTarget = c;
 
 document.addEventListener('mousedown', function(event) {
     myTarget = event.target;
@@ -74,7 +76,6 @@ document.addEventListener('mousedown', function(event) {
 document.addEventListener('wheel', function(event) {
     if (myTarget != c)
         return;
-    event.preventDefault();
     scrollz = event.deltaY;
 });
 
@@ -133,137 +134,132 @@ function getMousePos(canvas, evt) {
 }
 
 document.addEventListener('mousemove', function(evt) {
+    if (myTarget != c)
+        return;
     var mousePos = getMousePos(c, evt);
     MOUSE_POS.x = mousePos.x;
     MOUSE_POS.y = mousePos.y;
 });
 
 function prerenderMap(offset_z, raw_x, raw_y) {
-    setTimeout(() => {
-        var flag = false;
+    let flag = false;
 
-        var q_lon = raw_x * 10;
-        var q_lat = raw_y * 10;
-        //console.log("Generating (" + q_lon + ", " + q_lat + ", Z:" + offset_z + ")");
-        var canvas = document.createElement('canvas');
-        canvas.width = translateX(10, offset_z);
-        canvas.height = translateY(10, offset_z);
-        var ctx = canvas.getContext('2d', { alpha: true });
+    const q_lon = raw_x * chunk_size;
+    const q_lat = raw_y * chunk_size;
 
-        ctx.strokeStyle = "white";
-        var node;
-        var n_lon;
-        var n_lat;
-        var n2;
-        var n2_lon;
-        var n2_lat;
-        var x;
-        var y;
-        for (o in NODES) {
-            node = NODES[o];
-            n_lon = node.lon;
-            n_lat = node.lat;
-            if (n_lon > q_lon && n_lon < q_lon + 10 && n_lat > q_lat && n_lat < q_lat + 10) {
-                flag = true;
-                x = translateX(n_lon - q_lon, offset_z);
-                y = translateY(n_lat - q_lat, offset_z);
-                for (n in node.neighbors) {
-                    n2 = NODES[n];
-                    n2_lon = n2.lon;
-                    n2_lat = n2.lat;
-                    if (parseInt(n) > parseInt(o) || !(n2_lon > q_lon && n2_lon < q_lon + 10 && n2_lat > q_lat && n2_lat < q_lat + 10)) {
-                        switch (node.neighbors[n][0].type) {
-                            case "P--":
-                                ctx.lineWidth = 1;
-                                break;
-                            default:
-                                ctx.lineWidth = 0.5;
-                        }
-                        ctx.beginPath()
-                        ctx.moveTo(x, y);
-                        ctx.lineTo(translateX(NODES[n].lon - q_lon, offset_z), translateY(NODES[n].lat - q_lat, offset_z));
-                        ctx.stroke();
+    const canvas = document.createElement('canvas');
+    canvas.width = translateX(chunk_size, offset_z);
+    canvas.height = translateY(chunk_size, offset_z);
+    const ctx = canvas.getContext('2d', { alpha: true });
+
+    ctx.strokeStyle = "white";
+    let node;
+    let n_lon;
+    let n_lat;
+    let n2;
+    let n2_lon;
+    let n2_lat;
+    let x;
+    let y;
+    for (let o in NODES) {
+        node = NODES[o];
+        n_lon = node.lon;
+        n_lat = node.lat;
+        if (n_lon > q_lon && n_lon < q_lon + chunk_size && n_lat > q_lat && n_lat < q_lat + chunk_size) {
+            flag = true;
+            x = translateX(n_lon - q_lon, offset_z);
+            y = translateY(n_lat - q_lat, offset_z);
+            for (let n in node.neighbors) {
+                n2 = NODES[n];
+                n2_lon = n2.lon;
+                n2_lat = n2.lat;
+                if (parseInt(n) > parseInt(o) || !(n2_lon > q_lon && n2_lon < q_lon + chunk_size && n2_lat > q_lat && n2_lat < q_lat + chunk_size)) {
+                    switch (node.neighbors[n][0].type) {
+                        case "P--":
+                            ctx.lineWidth = 1;
+                            break;
+                        default:
+                            ctx.lineWidth = 0.5;
                     }
+                    ctx.beginPath()
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(translateX(NODES[n].lon - q_lon, offset_z), translateY(NODES[n].lat - q_lat, offset_z));
+                    ctx.stroke();
                 }
             }
         }
+    }
 
-        ctx.fillStyle = "#ff000044";
-        var o;
-        var o_lon;
-        var o_lat;
-        var scale;
-        var size;
-        for (var i = 0; i < PLACES.length; i++) {
-            o = PLACES[i];
-            o_lon = o.lon;
-            o_lat = o.lat;
-            if (o_lon > q_lon && o_lon < q_lon + 10 && o_lat > q_lat && o_lat < q_lat + 10) {
-                flag = true;
-                scale = o.pop / MAX_POP;
-                size = Math.sqrt(scale) * offset_z * 0.2 * DPI;
-                if (size >= 0.25) {
-                    x = translateX(o_lon - q_lon, offset_z);
-                    y = translateY(o_lat - q_lat, offset_z);
-                    ctx.beginPath();
-                    ctx.arc(x, y, 1 + size, 0, 2 * Math.PI);
-                    ctx.fill();
-                }
+    ctx.fillStyle = "#ff000044";
+    let o;
+    let o_lon;
+    let o_lat;
+    let scale;
+    let size;
+    for (let i = 0; i < PLACES.length; i++) {
+        o = PLACES[i];
+        o_lon = o.lon;
+        o_lat = o.lat;
+        if (o_lon > q_lon && o_lon < q_lon + chunk_size && o_lat > q_lat && o_lat < q_lat + chunk_size) {
+            flag = true;
+            scale = o.pop / MAX_POP;
+            size = Math.sqrt(scale) * offset_z * 0.2 * DPI;
+            if (size >= 0.25) {
+                x = translateX(o_lon - q_lon, offset_z);
+                y = translateY(o_lat - q_lat, offset_z);
+                ctx.beginPath();
+                ctx.arc(x, y, 1 + size, 0, 2 * Math.PI);
+                ctx.fill();
             }
         }
+    }
 
-        if (flag)
-            cache[offset_z][raw_x][raw_y] = canvas;
-        else
-            cache[20][raw_x][raw_y] = null;
-    }, 0);
+    if (flag)
+        return canvas;
+    else
+        return null;
 }
 
-var cache = {};
+const cache = {};
 for (var i = 20; i <= 200; i++) {
     cache[i] = {};
-    for (var x = -18; x <= 18; x++) {
+    for (var x = -180 / chunk_size; x <= 18 / chunk_size; x++) {
         cache[i][x] = {};
-        for (var y = -9; y <= 9; y++)
+        for (var y = -90 / chunk_size; y <= 90 / chunk_size; y++)
             cache[i][x][y] = 0;
     }
 }
 
 function render() {
-    var w_h_scale = (w_height / offset_z);
-    var w_w_scale = (w_width / offset_z);
+    const new_offset_x = offset_x + (xdirection) * speed * 5 / offset_z;
+    const new_offset_y = offset_y + (ydirection) * speed * 5 / offset_z;
+    const new_offset_z = Math.max(20, Math.min(200, fastround(offset_z + zdirection + scrollz)));
+    const w_h_scale = (w_height / new_offset_z);
+    const w_w_scale = (w_width / new_offset_z);
 
-    var new_offset_x = offset_x + (xdirection) * speed * 5 / offset_z;
-    var new_offset_y = offset_y + (ydirection) * speed * 5 / offset_z;
-    var new_offset_z = Math.max(20, Math.min(200, Math.round(offset_z + zdirection + scrollz)));
-
-    if (new_offset_z != offset_z || new_offset_x != offset_x || new_offset_y != offset_y || JSON.stringify(MOUSE_POS) != JSON.stringify(OLD_MOUSE_POS) || JSON.stringify(PATH) != JSON.stringify(CACHE_PATH) || !first_render) {
+    if (new_offset_z != offset_z || new_offset_x != offset_x || new_offset_y != offset_y || JSON.stringify(MOUSE_POS) != JSON.stringify(OLD_MOUSE_POS) || JSON.stringify(PATH) != JSON.stringify(CACHE_PATH) || renderQueue.length == 0 || !first_render) {
         first_render = true;
         OLD_MOUSE_POS.x = MOUSE_POS.x;
         OLD_MOUSE_POS.y = MOUSE_POS.y;
-        w_h_scale = (w_height / new_offset_z);
-        w_w_scale = (w_width / new_offset_z);
         offset_x = new_offset_x;
         offset_y = new_offset_y;
         offset_z = new_offset_z;
         ctx.clearRect(0, 0, c.width, -c.height);
 
-        var min_lon = (-offset_x);
-        var min_lat = (-offset_y);
-        var max_lon = (-offset_x + w_w_scale);
-        var max_lat = (-offset_y - w_h_scale);
-        var mid_lon = ((-offset_x + (-offset_x + w_w_scale)) / 2);
-        var mid_lat = ((-offset_y + (-offset_y + w_h_scale)) / 2);
+        const min_lon = (-offset_x);
+        const min_lat = (-offset_y);
+        const max_lon = (-offset_x + w_w_scale);
+        const max_lat = (-offset_y - w_h_scale);
 
         ctx.lineWidth = 1;
         ctx.strokeStyle = "#222";
-        for (var i = -9; i < 10; i++) {
+        for (let i = -9; i < 10; i++) {
             ctx.beginPath()
             ctx.moveTo(translateX(offset_x - 180, offset_z), translateY(offset_y + i * 10, offset_z));
             ctx.lineTo(translateX(offset_x + 180, offset_z), translateY(offset_y + i * 10, offset_z));
             ctx.stroke();
         }
-        for (var i = -18; i < 19; i++) {
+        for (let i = -18; i < 19; i++) {
             ctx.beginPath()
             ctx.moveTo(translateX(offset_x + i * 10, offset_z), translateY(offset_y - 90, offset_z));
             ctx.lineTo(translateX(offset_x + i * 10, offset_z), translateY(offset_y + 90, offset_z));
@@ -272,42 +268,42 @@ function render() {
 
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#fff";
-        var data;
-        for (var state in STATES) {
+        let data;
+        for (let state in STATES) {
             data = STATES[state];
-            for (var i = 0; i < data.length; i++) {
+            for (let i = 0; i < data.length; i++) {
                 ctx.beginPath()
                 ctx.moveTo(translateX(offset_x + data[i][0].lon, offset_z), translateY(offset_y + data[i][0].lat, offset_z));
-                for (var j = 1; j < data[i].length; j++) {
+                for (let j = 1; j < data[i].length; j++) {
                     ctx.lineTo(translateX(offset_x + data[i][j].lon, offset_z), translateY(offset_y + data[i][j].lat, offset_z));
                 }
                 ctx.stroke();
             }
         }
 
-        var min_q_x = Math.floor((min_lon) / 10);
-        var min_q_y = Math.ceil((min_lat) / 10);
-        var max_q_x = Math.ceil((max_lon) / 10);
-        var max_q_y = Math.floor((max_lat) / 10);
+        const min_q_x = Math.floor((min_lon) / chunk_size);
+        const min_q_y = Math.ceil((min_lat) / chunk_size);
+        const max_q_x = Math.ceil((max_lon) / chunk_size);
+        const max_q_y = Math.floor((max_lat) / chunk_size);
 
-        var nearest;
-        var dist;
+        let nearest;
+        let dist;
         if (cache[offset_z] !== undefined) {
-            for (var x = min_q_x; x <= max_q_x; x++) {
+            for (let x = min_q_x; x <= max_q_x; x++) {
                 if (cache[offset_z][x] !== undefined) {
-                    for (var y = min_q_y; y >= max_q_y; y--) {
+                    for (let y = min_q_y; y >= max_q_y; y--) {
                         if (cache[offset_z][x][y] !== undefined) {
                             if (cache[20][x][y] !== null) {
                                 nearest = 0;
                                 dist = 99999;
-                                for (var i in cache) {
+                                for (let i in cache) {
                                     if (Math.abs(i - offset_z) < dist && cache[i][x][y] !== 0 && cache[i][x][y] !== 1 && cache[i][x][y] !== undefined && cache[i][x][y] !== null) {
                                         nearest = i;
                                         dist = Math.abs(i - offset_z);
                                     }
                                 }
                                 if (nearest != 0) {
-                                    ctx.drawImage(cache[nearest][x][y], translateX(offset_x + x * 10, offset_z), translateY(offset_y + y * 10, offset_z), translateX(10, offset_z), translateY(10, offset_z));
+                                    ctx.drawImage(cache[nearest][x][y], translateX(offset_x + x * chunk_size, offset_z), translateY(offset_y + y * chunk_size, offset_z), translateX(chunk_size, offset_z), translateY(chunk_size, offset_z));
                                 }
                             } else {
                                 // no places or nodes inside this chunk
@@ -319,15 +315,15 @@ function render() {
         }
 
         if (PATH.length > 0) {
-            var miles = 0;
-            var path = "<table>";
-            var last = null;
-            var curr_miles = 0;
-            var curr_road = "";
-            var p;
-            var road;
-            var p_num = [];
-            for (var i = 0; i < PATH.length; i++) {
+            let miles = 0;
+            let path = "<table>";
+            let last = null;
+            let curr_miles = 0;
+            let curr_road = "";
+            let p;
+            let road;
+            let p_num = [];
+            for (let i = 0; i < PATH.length; i++) {
                 p = PATH[i];
                 if (last != null) {
                     ctx.strokeStyle = (selected_roads.includes(i) ? "#3333ff" : "#33ff33");
@@ -365,10 +361,10 @@ function render() {
             labelText(CITIES[city_b].lon, CITIES[city_b].lat, city_b);
         }
 
-        var lon = (MOUSE_POS.x / offset_z) - offset_x;
-        var lat = -((MOUSE_POS.y / offset_z) + offset_y);
-        var closest = getClosest(lon, lat);
-        var label = closest.name + ", " + closest.state;
+        const lon = (MOUSE_POS.x / offset_z) - offset_x;
+        const lat = -((MOUSE_POS.y / offset_z) + offset_y);
+        const closest = getClosest(lon, lat);
+        const label = closest.name + ", " + closest.state;
 
         ctx.fillStyle = "#6666ff";
         ctx.beginPath();
@@ -378,22 +374,29 @@ function render() {
         labelText(closest.lon, closest.lat, label);
     }
 
-    var min_q_x = Math.floor((min_lon) / 10);
-    var min_q_y = Math.ceil((min_lat) / 10);
-    var max_q_x = Math.ceil((max_lon) / 10);
-    var max_q_y = Math.floor((max_lat) / 10);
+    if (renderQueue.length > 0) {
+        let next;
+        next = renderQueue[0];
+        renderQueue.shift();
+        const data = prerenderMap(next[0], next[1], next[2]);
+        cache[next[0]][next[1]][next[2]] = data;
+    }
 
-    if (cache[offset_z] !== undefined) {
-        for (var x = min_q_x; x <= max_q_x; x++) {
+    if (cache[offset_z] !== undefined && zdirection == 0 && Math.abs(scrollz) < 0.5) {
+        const min_q_x = Math.floor((-offset_x) / chunk_size);
+        const min_q_y = Math.ceil((-offset_y) / chunk_size);
+        const max_q_x = Math.ceil((-offset_x + w_w_scale) / chunk_size);
+        const max_q_y = Math.floor((-offset_y - w_h_scale) / chunk_size);
+        for (let x = min_q_x; x <= max_q_x; x++) {
             if (cache[offset_z][x] !== undefined) {
-                for (var y = min_q_y; y >= max_q_y; y--) {
+                for (let y = min_q_y; y >= max_q_y; y--) {
                     if (cache[offset_z][x][y] !== undefined && cache[20][x][y] !== null) {
-                        if (cache[offset_z][x][y] === 0 && zdirection == 0 && Math.abs(scrollz) < 0.5) {
+                        if (cache[offset_z][x][y] === 0) {
                             cache[offset_z][x][y] = 1;
-                            prerenderMap(offset_z, x, y);
+                            renderQueue.push([offset_z, x, y]);
                         }
                     } else if (cache[20][x][y] === null) {
-                        cache[offset_z][x][y] == null;
+                        cache[offset_z][x][y] = null;
                     }
                 }
             }
@@ -403,8 +406,8 @@ function render() {
 
 function labelText(lon, lat, label) {
     ctx.scale(1, -1);
-    var x = translateX(lon + offset_x, offset_z);
-    var y = -translateY(lat + offset_y, offset_z);
+    const x = translateX(lon + offset_x, offset_z);
+    const y = -translateY(lat + offset_y, offset_z);
     ctx.fillStyle = "#fff";
     ctx.fillRect(x, y - 22, ctx.measureText(label).width + 10, 22);
     ctx.fillStyle = "#333";
@@ -415,8 +418,8 @@ function labelText(lon, lat, label) {
 }
 
 function getClosest(lon, lat) {
-    var closest = null;
-    for (var i = 0; i < PLACES.length; i++) {
+    let closest = null;
+    for (let i = 0; i < PLACES.length; i++) {
         if (closest == null) {
             closest = PLACES[i];
         } else if (Math.sqrt(Math.pow(lon - closest.lon, 2) + Math.pow(lat - closest.lat, 2)) > Math.sqrt(Math.pow(lon - PLACES[i].lon, 2) + Math.pow(lat - PLACES[i].lat, 2))) {
@@ -439,15 +442,14 @@ function grid(x, size) {
 }
 
 function scale(upper_x, lower_x) {
-    var d = c.width / Math.abs(upper_x - lower_x);
-    return d;
+    return c.width / Math.abs(upper_x - lower_x);
 }
 
-fastround = function(x) {
+const fastround = function(x) {
     return (x + (x > 0 ? 0.5 : -0.5)) << 0;
 };
 
-var pathWorker = new Worker('src/worker.js');
+const pathWorker = new Worker('src/worker.js');
 
 pathWorker.addEventListener('message', function(e) {
     console.log(e.data);
