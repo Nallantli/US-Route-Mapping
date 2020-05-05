@@ -76,12 +76,15 @@ body {
 #path {
     padding: 15px;
     overflow: auto;
-    height: 50vh;
+    height: calc(100% - 280px);
     font-size: 12px;
+    position: absolute;
+    width: 270px;
 }
 
 #sig {
     margin: auto;
+    margin-bottom: 10px;
     text-align: center;
 }
 
@@ -133,6 +136,10 @@ input[type=text] {
 
 .autocomplete-items div:hover {
     /*when hovering an item:*/
+    background-color: #333366;
+}
+
+tr:hover {
     background-color: #333366;
 }
 

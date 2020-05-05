@@ -172,12 +172,12 @@ class PlaceObj {
 		s += "\t\"id\":\"" + unique + "\",\n";
 		s += "\t\"state\":\"" + state + "\",\n";
 		s += "\t\"name\":\"" + name + "\",\n";
-		s += "\t\"pop\":\"" + population + "\",\n";
-		s += "\t\"area\":\"" + area + "\",\n";
-		s += "\t\"lat\":\"" + lat + "\",\n";
-		s += "\t\"lon\":\"" + lon + "\",\n";
+		s += "\t\"pop\":" + population + ",\n";
+		s += "\t\"area\":" + area + ",\n";
+		s += "\t\"lat\":" + lat + ",\n";
+		s += "\t\"lon\":" + lon + ",\n";
 		s += "\t\"intersection\":\"" + inter + "\",\n";
-		s += "\t\"distance\":\"" + dist + "\"\n";
+		s += "\t\"distance\":" + dist + "\n";
 		return s + "}";
 	}
 }
@@ -200,8 +200,8 @@ class Intersection {
 		String s = "\"" + id + "\":{\n";
 		s += "\t\"id\":\"" + id + "\",\n";
 		s += "\t\"state\":\"" + state + "\",\n";
-		s += "\t\"lat\":\"" + lat + "\",\n";
-		s += "\t\"lon\":\"" + lon + "\",\n";
+		s += "\t\"lat\":" + lat + ",\n";
+		s += "\t\"lon\":" + lon + ",\n";
 		s += "\t\"neighbors\": {\n";
 		int i = 0;
 		for (Map.Entry<Intersection, ArrayList<Road>> e : neighbors.entrySet()) {
@@ -211,7 +211,7 @@ class Intersection {
 				s += "\t\t\t{\n";
 				s += "\t\t\t\t\"name\":\"" + r.name + "\",\n";
 				s += "\t\t\t\t\"type\":\"" + r.type + "\",\n";
-				s += "\t\t\t\t\"length\":\"" + r.length + "\"\n";
+				s += "\t\t\t\t\"length\":" + r.length + "\n";
 				s += "\t\t\t}";
 				if (j == e.getValue().size() - 1) {
 					s += "\n";
@@ -258,7 +258,7 @@ class State {
 		for (ArrayList<Point.Double> list : vertices) {
 			s += "\t[\n";
 			for (Point.Double vertex : list) {
-				s += "\t\t{\"lon\":\"" + vertex.x + "\", \"lat\":\"" + vertex.y + "\"}";
+				s += "\t\t{\"lon\":" + vertex.x + ", \"lat\":" + vertex.y + "}";
 				if (list.get(list.size() - 1) == vertex) {
 					s += "\n";
 				} else {

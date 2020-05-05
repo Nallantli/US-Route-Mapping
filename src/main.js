@@ -14,13 +14,14 @@ var OLD_MOUSE_POS = { x: 0, y: 0 };
 
 var city_a = null;
 var city_b = null;
+var selected_roads = [];
 
 var CITIES = {};
 
 let c = document.getElementById('map-canvas');
 c.width = w_width * DPI;
 c.height = w_height * DPI;
-let ctx = c.getContext("2d", { alpha: false, desynchronized: true });
+let ctx = c.getContext("2d", { alpha: false });
 ctx.font = "1em Arial";
 ctx.scale(DPI, -DPI);
 
@@ -31,18 +32,18 @@ var upper_x = -99999;
 
 for (var i = 0; i < PLACES.length; i++) {
     var o = PLACES[i];
-    if (parseFloat(o.lat) < lower_y)
-        lower_y = parseFloat(o.lat);
-    if (parseFloat(o.lat) > upper_y)
-        upper_y = parseFloat(o.lat);
-    if (parseFloat(o.lon) < lower_x)
-        lower_x = parseFloat(o.lon);
-    if (parseFloat(o.lon) > upper_x)
-        upper_x = parseFloat(o.lon);
-    if (parseInt(o.pop) > MAX_POP)
-        MAX_POP = parseInt(o.pop);
-    if (parseInt(o.pop) < MIN_POP)
-        MIN_POP = parseInt(o.pop);
+    if (o.lat < lower_y)
+        lower_y = o.lat;
+    if (o.lat > upper_y)
+        upper_y = o.lat;
+    if (o.lon < lower_x)
+        lower_x = o.lon;
+    if (o.lon > upper_x)
+        upper_x = o.lon;
+    if (o.pop > MAX_POP)
+        MAX_POP = o.pop;
+    if (o.pop < MIN_POP)
+        MIN_POP = o.pop;
     CITIES[o.name + ", " + o.state] = o;
 }
 
@@ -147,21 +148,29 @@ function prerenderMap(offset_z, raw_x, raw_y) {
         var canvas = document.createElement('canvas');
         canvas.width = translateX(10, offset_z);
         canvas.height = translateY(10, offset_z);
-        var ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+        var ctx = canvas.getContext('2d', { alpha: true });
 
         ctx.strokeStyle = "white";
+        var node;
+        var n_lon;
+        var n_lat;
+        var n2;
+        var n2_lon;
+        var n2_lat;
+        var x;
+        var y;
         for (o in NODES) {
-            var node = NODES[o];
-            var n_lon = parseFloat(node.lon);
-            var n_lat = parseFloat(node.lat);
+            node = NODES[o];
+            n_lon = node.lon;
+            n_lat = node.lat;
             if (n_lon > q_lon && n_lon < q_lon + 10 && n_lat > q_lat && n_lat < q_lat + 10) {
                 flag = true;
-                var x = translateX(n_lon - q_lon, offset_z);
-                var y = translateY(n_lat - q_lat, offset_z);
+                x = translateX(n_lon - q_lon, offset_z);
+                y = translateY(n_lat - q_lat, offset_z);
                 for (n in node.neighbors) {
-                    var n2 = NODES[n];
-                    var n2_lon = n2.lon;
-                    var n2_lat = n2.lat;
+                    n2 = NODES[n];
+                    n2_lon = n2.lon;
+                    n2_lat = n2.lat;
                     if (parseInt(n) > parseInt(o) || !(n2_lon > q_lon && n2_lon < q_lon + 10 && n2_lat > q_lat && n2_lat < q_lat + 10)) {
                         switch (node.neighbors[n][0].type) {
                             case "P--":
@@ -172,7 +181,7 @@ function prerenderMap(offset_z, raw_x, raw_y) {
                         }
                         ctx.beginPath()
                         ctx.moveTo(x, y);
-                        ctx.lineTo(translateX(parseFloat(NODES[n].lon) - q_lon, offset_z), translateY(parseFloat(NODES[n].lat) - q_lat, offset_z));
+                        ctx.lineTo(translateX(NODES[n].lon - q_lon, offset_z), translateY(NODES[n].lat - q_lat, offset_z));
                         ctx.stroke();
                     }
                 }
@@ -180,19 +189,24 @@ function prerenderMap(offset_z, raw_x, raw_y) {
         }
 
         ctx.fillStyle = "#ff000044";
+        var o;
+        var o_lon;
+        var o_lat;
+        var scale;
+        var size;
         for (var i = 0; i < PLACES.length; i++) {
-            var o = PLACES[i];
-            var o_lon = parseFloat(o.lon);
-            var o_lat = parseFloat(o.lat);
+            o = PLACES[i];
+            o_lon = o.lon;
+            o_lat = o.lat;
             if (o_lon > q_lon && o_lon < q_lon + 10 && o_lat > q_lat && o_lat < q_lat + 10) {
                 flag = true;
-                var scale = ((o.pop + MAX_POP) / (MAX_POP + MAX_POP)) / 2;
-                var size = Math.sqrt(Math.sqrt(scale) * offset_z * 0.001 * DPI);
-                if (size >= 0.5) {
-                    var x = translateX(o_lon - q_lon, offset_z);
-                    var y = translateY(o_lat - q_lat, offset_z);
+                scale = o.pop / MAX_POP;
+                size = Math.sqrt(scale) * offset_z * 0.2 * DPI;
+                if (size >= 0.25) {
+                    x = translateX(o_lon - q_lon, offset_z);
+                    y = translateY(o_lat - q_lat, offset_z);
                     ctx.beginPath();
-                    ctx.arc(x, y, size, 0, 2 * Math.PI);
+                    ctx.arc(x, y, 1 + size, 0, 2 * Math.PI);
                     ctx.fill();
                 }
             }
@@ -201,7 +215,7 @@ function prerenderMap(offset_z, raw_x, raw_y) {
         if (flag)
             cache[offset_z][raw_x][raw_y] = canvas;
         else
-            cache[offset_z][raw_x][raw_y] = null;
+            cache[20][raw_x][raw_y] = null;
     }, 0);
 }
 
@@ -215,8 +229,7 @@ for (var i = 20; i <= 200; i++) {
     }
 }
 
-(function render() {
-    window.requestAnimationFrame(render);
+function render() {
     var w_h_scale = (w_height / offset_z);
     var w_w_scale = (w_width / offset_z);
 
@@ -224,7 +237,7 @@ for (var i = 20; i <= 200; i++) {
     var new_offset_y = offset_y + (ydirection) * speed * 5 / offset_z;
     var new_offset_z = Math.max(20, Math.min(200, Math.round(offset_z + zdirection + scrollz)));
 
-    if (new_offset_z != offset_z || new_offset_x != offset_x || new_offset_y != offset_y || MOUSE_POS != OLD_MOUSE_POS || !first_render) {
+    if (new_offset_z != offset_z || new_offset_x != offset_x || new_offset_y != offset_y || JSON.stringify(MOUSE_POS) != JSON.stringify(OLD_MOUSE_POS) || JSON.stringify(PATH) != JSON.stringify(CACHE_PATH) || !first_render) {
         first_render = true;
         OLD_MOUSE_POS.x = MOUSE_POS.x;
         OLD_MOUSE_POS.y = MOUSE_POS.y;
@@ -232,12 +245,8 @@ for (var i = 20; i <= 200; i++) {
         w_w_scale = (w_width / new_offset_z);
         offset_x = new_offset_x;
         offset_y = new_offset_y;
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, c.width, -c.height);
-
-        if (new_offset_z != offset_z) {
-            offset_z = new_offset_z;
-        }
+        offset_z = new_offset_z;
+        ctx.clearRect(0, 0, c.width, -c.height);
 
         var min_lon = (-offset_x);
         var min_lat = (-offset_y);
@@ -263,13 +272,14 @@ for (var i = 20; i <= 200; i++) {
 
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#fff";
+        var data;
         for (var state in STATES) {
-            var data = STATES[state];
+            data = STATES[state];
             for (var i = 0; i < data.length; i++) {
                 ctx.beginPath()
-                ctx.moveTo(translateX(offset_x + parseFloat(data[i][0].lon), offset_z), translateY(offset_y + parseFloat(data[i][0].lat), offset_z));
+                ctx.moveTo(translateX(offset_x + data[i][0].lon, offset_z), translateY(offset_y + data[i][0].lat, offset_z));
                 for (var j = 1; j < data[i].length; j++) {
-                    ctx.lineTo(translateX(offset_x + parseFloat(data[i][j].lon), offset_z), translateY(offset_y + parseFloat(data[i][j].lat), offset_z));
+                    ctx.lineTo(translateX(offset_x + data[i][j].lon, offset_z), translateY(offset_y + data[i][j].lat, offset_z));
                 }
                 ctx.stroke();
             }
@@ -280,14 +290,16 @@ for (var i = 20; i <= 200; i++) {
         var max_q_x = Math.ceil((max_lon) / 10);
         var max_q_y = Math.floor((max_lat) / 10);
 
+        var nearest;
+        var dist;
         if (cache[offset_z] !== undefined) {
             for (var x = min_q_x; x <= max_q_x; x++) {
                 if (cache[offset_z][x] !== undefined) {
                     for (var y = min_q_y; y >= max_q_y; y--) {
                         if (cache[offset_z][x][y] !== undefined) {
-                            if (cache[offset_z][x][y] !== null) {
-                                var nearest = 0;
-                                var dist = 99999;
+                            if (cache[20][x][y] !== null) {
+                                nearest = 0;
+                                dist = 99999;
                                 for (var i in cache) {
                                     if (Math.abs(i - offset_z) < dist && cache[i][x][y] !== 0 && cache[i][x][y] !== 1 && cache[i][x][y] !== undefined && cache[i][x][y] !== null) {
                                         nearest = i;
@@ -309,34 +321,39 @@ for (var i = 20; i <= 200; i++) {
         if (PATH.length > 0) {
             var miles = 0;
             var path = "<table>";
-            ctx.strokeStyle = "#33ff33";
-            ctx.lineWidth = 2.5;
             var last = null;
             var curr_miles = 0;
             var curr_road = "";
+            var p;
+            var road;
+            var p_num = [];
             for (var i = 0; i < PATH.length; i++) {
-                var p = PATH[i];
+                p = PATH[i];
                 if (last != null) {
+                    ctx.strokeStyle = (selected_roads.includes(i) ? "#3333ff" : "#33ff33");
+                    ctx.lineWidth = (selected_roads.includes(i) ? 4 : 2);
                     ctx.beginPath()
-                    ctx.moveTo(translateX(parseFloat(last.lon) + offset_x, offset_z), translateY(parseFloat(last.lat) + offset_y, offset_z));
-                    ctx.lineTo(translateX(parseFloat(p.lon) + offset_x, offset_z), translateY(parseFloat(p.lat) + offset_y, offset_z));
+                    ctx.moveTo(translateX(last.lon + offset_x, offset_z), translateY(last.lat + offset_y, offset_z));
+                    ctx.lineTo(translateX(p.lon + offset_x, offset_z), translateY(p.lat + offset_y, offset_z));
                     ctx.stroke();
-                    var road = p.neighbors[last.id][0];
-                    if (road.name == curr_road)
-                        curr_miles += parseFloat(road.length);
-                    else {
+                    road = p.neighbors[last.id][0];
+                    if (road.name == curr_road) {
+                        curr_miles += road.length;
+                        p_num.push(i);
+                    } else {
                         if (curr_road != "") {
-                            path += "<tr><td><b>" + curr_road + "</b></td><td class=\"right-align\">" + curr_miles.toFixed(2) + " MI</td></tr>";
+                            path += `<tr onmouseover="highlightRoads(${JSON.stringify(p_num)})" onmouseout="resetRoads()"><td><b>${curr_road}</b></td><td class="right-align">${curr_miles.toFixed(2)} MI</td></tr>`;
                         }
-                        curr_miles = parseFloat(road.length);
+                        p_num = [i];
+                        curr_miles = road.length;
                     }
                     curr_road = road.name;
-                    miles += parseFloat(road.length);
+                    miles += road.length;
                 }
                 last = p;
             }
-            if (PATH != CACHE_PATH) {
-                path += "<tr><td><b>" + curr_road + "</b></td><td class=\"right-align\">" + curr_miles.toFixed(2) + " MI</td></tr>";
+            if (JSON.stringify(PATH) != JSON.stringify(CACHE_PATH)) {
+                path += `<tr onmouseover="highlightRoads(${JSON.stringify(p_num)})" onmouseout="resetRoads()"><td><b>${curr_road}</b></td><td class="right-align">${curr_miles.toFixed(2)} MI</td></tr>`;
                 CACHE_PATH = PATH;
                 document.getElementById("sig").innerHTML = "<i>Length: " + miles.toFixed(2) + " MI</i>";
                 document.getElementById("path").innerHTML = path + "</table>";
@@ -355,7 +372,7 @@ for (var i = 20; i <= 200; i++) {
 
         ctx.fillStyle = "#6666ff";
         ctx.beginPath();
-        ctx.arc(translateX(parseFloat(closest.lon) + offset_x, offset_z), translateY(parseFloat(closest.lat) + offset_y, offset_z), offset_z / 20, 0, Math.PI * 2);
+        ctx.arc(translateX(closest.lon + offset_x, offset_z), translateY(closest.lat + offset_y, offset_z), offset_z / 20, 0, Math.PI * 2);
         ctx.fill();
 
         labelText(closest.lon, closest.lat, label);
@@ -370,22 +387,24 @@ for (var i = 20; i <= 200; i++) {
         for (var x = min_q_x; x <= max_q_x; x++) {
             if (cache[offset_z][x] !== undefined) {
                 for (var y = min_q_y; y >= max_q_y; y--) {
-                    if (cache[offset_z][x][y] !== undefined) {
+                    if (cache[offset_z][x][y] !== undefined && cache[20][x][y] !== null) {
                         if (cache[offset_z][x][y] === 0 && zdirection == 0 && Math.abs(scrollz) < 0.5) {
                             cache[offset_z][x][y] = 1;
                             prerenderMap(offset_z, x, y);
                         }
+                    } else if (cache[20][x][y] === null) {
+                        cache[offset_z][x][y] == null;
                     }
                 }
             }
         }
     }
-})();
+}
 
 function labelText(lon, lat, label) {
     ctx.scale(1, -1);
-    var x = translateX(parseFloat(lon) + offset_x, offset_z);
-    var y = -translateY(parseFloat(lat) + offset_y, offset_z);
+    var x = translateX(lon + offset_x, offset_z);
+    var y = -translateY(lat + offset_y, offset_z);
     ctx.fillStyle = "#fff";
     ctx.fillRect(x, y - 22, ctx.measureText(label).width + 10, 22);
     ctx.fillStyle = "#333";
@@ -408,11 +427,11 @@ function getClosest(lon, lat) {
 }
 
 function translateX(x, offset_z) {
-    return (x * offset_z);
+    return fastround(x * offset_z);
 }
 
 function translateY(y, offset_z) {
-    return (y * offset_z);
+    return fastround(y * offset_z);
 }
 
 function grid(x, size) {
@@ -423,6 +442,10 @@ function scale(upper_x, lower_x) {
     var d = c.width / Math.abs(upper_x - lower_x);
     return d;
 }
+
+fastround = function(x) {
+    return (x + (x > 0 ? 0.5 : -0.5)) << 0;
+};
 
 var pathWorker = new Worker('src/worker.js');
 
@@ -463,3 +486,16 @@ function pulloutNav() {
         document.getElementById("navbutton").innerHTML = "⇐";
     }
 }
+
+function highlightRoads(roads) {
+    selected_roads = roads;
+}
+
+function resetRoads() {
+    selected_roads = [];
+}
+
+(function loop() {
+    window.requestAnimationFrame(loop);
+    render();
+})();
