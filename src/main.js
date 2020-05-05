@@ -261,6 +261,20 @@ for (var i = 20; i <= 200; i++) {
             ctx.stroke();
         }
 
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#fff";
+        for (var state in STATES) {
+            var data = STATES[state];
+            for (var i = 0; i < data.length; i++) {
+                ctx.beginPath()
+                ctx.moveTo(translateX(offset_x + parseFloat(data[i][0].lon), offset_z), translateY(offset_y + parseFloat(data[i][0].lat), offset_z));
+                for (var j = 1; j < data[i].length; j++) {
+                    ctx.lineTo(translateX(offset_x + parseFloat(data[i][j].lon), offset_z), translateY(offset_y + parseFloat(data[i][j].lat), offset_z));
+                }
+                ctx.stroke();
+            }
+        }
+
         var min_q_x = Math.floor((min_lon) / 10);
         var min_q_y = Math.ceil((min_lat) / 10);
         var max_q_x = Math.ceil((max_lon) / 10);

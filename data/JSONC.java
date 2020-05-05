@@ -9,12 +9,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.awt.Point;
+
 public class JSONC {
 	public static void main(String[] args) {
 		try {
 			ArrayList<PlaceObj> places = new ArrayList<PlaceObj>();
 			HashMap<Integer, Intersection> intersections = new HashMap<Integer, Intersection>();
 			ArrayList<Road> roads = new ArrayList<Road>();
+			HashMap<String, State> states = new HashMap<String, State>();
 
 			System.out.println("Loading Places...");
 			File f = new File("data/named-places.txt");
@@ -61,6 +64,27 @@ public class JSONC {
 			}
 			br.close();
 
+			System.out.println("Loading States...");
+			f = new File("data/states.txt");
+			br = new BufferedReader(new FileReader(f));
+			while ((line = br.readLine()) != null) {
+				if (line.length() == 2) {
+					if (!states.containsKey(line))
+						states.put(line, new State(line));
+					String state = line;
+					ArrayList<Point.Double> vertices = new ArrayList<Point.Double>();
+					while (!(line = br.readLine()).equals("-1 -1")) {
+						String lon_raw = sanitize(line.substring(0, 6));
+						String lat_raw = sanitize(line.substring(6, 13));
+						double lon = -Double.valueOf(lon_raw) / 1000D;
+						double lat = Double.valueOf(lat_raw) / 1000D;
+						vertices.add(new Point.Double(lon, lat));
+					}
+					states.get(state).vertices.add(vertices);
+				}
+			}
+			br.close();
+
 			System.out.println("Repackaging Intersections...");
 			for (Map.Entry<Integer, Intersection> e : intersections.entrySet()) {
 				for (Road r : roads) {
@@ -92,6 +116,18 @@ public class JSONC {
 			bw.write("const NODES = {\n");
 			int c = 0;
 			for (Map.Entry<Integer, Intersection> i : intersections.entrySet()) {
+				bw.write(i.getValue().toString());
+				if (intersections.size() - 1 != c) {
+					bw.write(",\n");
+				}
+				c++;
+			}
+			bw.write("};");
+
+			System.out.println("Printing States to File...");
+			bw.write("const STATES = {\n");
+			c = 0;
+			for (Map.Entry<String, State> i : states.entrySet()) {
 				bw.write(i.getValue().toString());
 				if (intersections.size() - 1 != c) {
 					bw.write(",\n");
@@ -205,5 +241,37 @@ class Road {
 		this.iA = iA;
 		this.iB = iB;
 		this.length = length;
+	}
+}
+
+class State {
+	String state;
+	ArrayList<ArrayList<Point.Double>> vertices;
+
+	public State(String state) {
+		this.state = state;
+		vertices = new ArrayList<ArrayList<Point.Double>>();
+	}
+
+	public String toString() {
+		String s = "\"" + state + "\":[\n";
+		for (ArrayList<Point.Double> list : vertices) {
+			s += "\t[\n";
+			for (Point.Double vertex : list) {
+				s += "\t\t{\"lon\":\"" + vertex.x + "\", \"lat\":\"" + vertex.y + "\"}";
+				if (list.get(list.size() - 1) == vertex) {
+					s += "\n";
+				} else {
+					s += ",\n";
+				}
+			}
+			s += "]";
+			if (vertices.get(vertices.size() - 1) == list) {
+				s += "\n";
+			} else {
+				s += ",\n";
+			}
+		}
+		return s + "]";
 	}
 }
