@@ -11,7 +11,7 @@ function autocomplete(inp, arr) {
         currentFocus = -1;
         /*create a DIV element that will contain the items (values):*/
         a = document.createElement("DIV");
-        a.setAttribute("id", this.id + "autocomplete-list");
+        a.setAttribute("id", this.id + " autocomplete-list");
         a.setAttribute("class", "autocomplete-items");
         /*append the DIV element as a child of the autocomplete container:*/
         this.parentNode.appendChild(a);
@@ -30,6 +30,7 @@ function autocomplete(inp, arr) {
                 b.addEventListener("click", function(e) {
                     /*insert the value for the autocomplete text field:*/
                     inp.value = this.getElementsByTagName("input")[0].value;
+                    inp.focus();
                     /*close the list of autocompleted values,
                     (or any other open lists of autocompleted values:*/
                     closeAllLists();

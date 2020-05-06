@@ -12,9 +12,13 @@ var MIN_POP = 9999;
 var MOUSE_POS = { x: 0, y: 0 };
 var OLD_MOUSE_POS = { x: 0, y: 0 };
 const chunk_size = 5;
+const MAX_ZOOM = 300;
+const MIN_ZOOM = 20;
+let MOUSE_DOWN = false;
 
 let city_a = null;
 let city_b = null;
+let city_c = null;
 var selected_roads = [];
 var renderQueue = [];
 
@@ -51,8 +55,9 @@ for (var i = 0; i < PLACES.length; i++) {
 
 autocomplete(document.getElementById("a_input"), Object.keys(CITIES));
 autocomplete(document.getElementById("b_input"), Object.keys(CITIES));
+autocomplete(document.getElementById("search_input"), Object.keys(CITIES));
 
-offset_z = Math.floor(scale(upper_x * DPI, lower_x * DPI));
+offset_z = Math.floor(scale(upper_x, lower_x, upper_y, lower_y));
 offset_x = 130;
 offset_y = -50;
 
@@ -69,14 +74,30 @@ let scrollz = 0;
 
 let myTarget = c;
 
-document.addEventListener('mousedown', function(event) {
+document.addEventListener('pointerdown', function(event) {
     myTarget = event.target;
-}, false);
+    MOUSE_DOWN = true;
+});
+
+window.addEventListener('pointerup', e => {
+    MOUSE_DOWN = false;
+});
 
 document.addEventListener('wheel', function(event) {
     if (myTarget != c)
         return;
     scrollz = event.deltaY;
+});
+
+document.getElementById("search_input").addEventListener("keyup", function(event) {
+    if (event.keyCode === 13) {
+        if (Object.keys(CITIES).includes(document.getElementById("search_input").value)) {
+            const city = CITIES[document.getElementById("search_input").value];
+            city_c = document.getElementById("search_input").value;
+            offset_z = MAX_ZOOM;
+            center(city.lon, city.lat);
+        }
+    }
 });
 
 document.addEventListener("keydown", (e) => {
@@ -133,12 +154,16 @@ function getMousePos(canvas, evt) {
     };
 }
 
-document.addEventListener('mousemove', function(evt) {
+document.addEventListener('pointermove', function(evt) {
     if (myTarget != c)
         return;
     var mousePos = getMousePos(c, evt);
     MOUSE_POS.x = mousePos.x;
     MOUSE_POS.y = mousePos.y;
+    if (MOUSE_DOWN) {
+        offset_x += (evt.movementX / offset_z);
+        offset_y -= (evt.movementY / offset_z);
+    }
 });
 
 function prerenderMap(offset_z, raw_x, raw_y) {
@@ -221,7 +246,7 @@ function prerenderMap(offset_z, raw_x, raw_y) {
 }
 
 const cache = {};
-for (var i = 20; i <= 200; i++) {
+for (var i = MIN_ZOOM; i <= MAX_ZOOM; i++) {
     cache[i] = {};
     for (var x = -180 / chunk_size; x <= 18 / chunk_size; x++) {
         cache[i][x] = {};
@@ -233,11 +258,11 @@ for (var i = 20; i <= 200; i++) {
 function render() {
     const new_offset_x = offset_x + (xdirection) * speed * 5 / offset_z;
     const new_offset_y = offset_y + (ydirection) * speed * 5 / offset_z;
-    const new_offset_z = Math.max(20, Math.min(200, fastround(offset_z + zdirection + scrollz)));
+    const new_offset_z = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, fastround(offset_z + zdirection + scrollz)));
     const w_h_scale = (w_height / new_offset_z);
     const w_w_scale = (w_width / new_offset_z);
 
-    if (new_offset_z != offset_z || new_offset_x != offset_x || new_offset_y != offset_y || JSON.stringify(MOUSE_POS) != JSON.stringify(OLD_MOUSE_POS) || JSON.stringify(PATH) != JSON.stringify(CACHE_PATH) || renderQueue.length == 0 || !first_render) {
+    if (new_offset_z != offset_z || new_offset_x != offset_x || new_offset_y != offset_y || (JSON.stringify(MOUSE_POS) != JSON.stringify(OLD_MOUSE_POS) && myTarget == c) || JSON.stringify(PATH) != JSON.stringify(CACHE_PATH) || renderQueue.length == 0 || !first_render) {
         first_render = true;
         OLD_MOUSE_POS.x = MOUSE_POS.x;
         OLD_MOUSE_POS.y = MOUSE_POS.y;
@@ -293,7 +318,7 @@ function render() {
                 if (cache[offset_z][x] !== undefined) {
                     for (let y = min_q_y; y >= max_q_y; y--) {
                         if (cache[offset_z][x][y] !== undefined) {
-                            if (cache[20][x][y] !== null) {
+                            if (cache[MIN_ZOOM][x][y] !== null) {
                                 nearest = 0;
                                 dist = 99999;
                                 for (let i in cache) {
@@ -361,17 +386,23 @@ function render() {
             labelText(CITIES[city_b].lon, CITIES[city_b].lat, city_b);
         }
 
-        const lon = (MOUSE_POS.x / offset_z) - offset_x;
-        const lat = -((MOUSE_POS.y / offset_z) + offset_y);
-        const closest = getClosest(lon, lat);
-        const label = closest.name + ", " + closest.state;
+        if (city_c != null) {
+            labelText(CITIES[city_c].lon, CITIES[city_c].lat, city_c);
+        }
 
-        ctx.fillStyle = "#6666ff";
-        ctx.beginPath();
-        ctx.arc(translateX(closest.lon + offset_x, offset_z), translateY(closest.lat + offset_y, offset_z), offset_z / 20, 0, Math.PI * 2);
-        ctx.fill();
+        if (myTarget == c) {
+            const lon = (MOUSE_POS.x / offset_z) - offset_x;
+            const lat = -((MOUSE_POS.y / offset_z) + offset_y);
+            const closest = getClosest(lon, lat);
+            const label = closest.name + ", " + closest.state;
 
-        labelText(closest.lon, closest.lat, label);
+            ctx.fillStyle = "#6666ff";
+            ctx.beginPath();
+            ctx.arc(translateX(closest.lon + offset_x, offset_z), translateY(closest.lat + offset_y, offset_z), offset_z / 20, 0, Math.PI * 2);
+            ctx.fill();
+
+            labelText(closest.lon, closest.lat, label);
+        }
     }
 
     if (renderQueue.length > 0) {
@@ -390,12 +421,12 @@ function render() {
         for (let x = min_q_x; x <= max_q_x; x++) {
             if (cache[offset_z][x] !== undefined) {
                 for (let y = min_q_y; y >= max_q_y; y--) {
-                    if (cache[offset_z][x][y] !== undefined && cache[20][x][y] !== null) {
+                    if (cache[offset_z][x][y] !== undefined && cache[MIN_ZOOM][x][y] !== null) {
                         if (cache[offset_z][x][y] === 0) {
                             cache[offset_z][x][y] = 1;
                             renderQueue.push([offset_z, x, y]);
                         }
-                    } else if (cache[20][x][y] === null) {
+                    } else if (cache[MIN_ZOOM][x][y] === null) {
                         cache[offset_z][x][y] = null;
                     }
                 }
@@ -441,8 +472,17 @@ function grid(x, size) {
     return size * Math.floor(x / size);
 }
 
-function scale(upper_x, lower_x) {
-    return c.width / Math.abs(upper_x - lower_x);
+function scale(upper_x, lower_x, upper_y, lower_y, w) {
+    if (!w)
+        w = w_width
+    return Math.min(w / Math.abs(upper_x - lower_x), w_height / Math.abs(upper_y - lower_y));
+}
+
+function center(lon, lat, w) {
+    if (!w)
+        w = w_width
+    offset_x = -lon + (w / offset_z) / 2;
+    offset_y = -lat - (w_height / offset_z) / 2;
 }
 
 const fastround = function(x) {
@@ -454,13 +494,38 @@ const pathWorker = new Worker('src/worker.js');
 pathWorker.addEventListener('message', function(e) {
     console.log(e.data);
     PATH = e.data;
+    let max_lat = -9999;
+    let min_lat = 9999;
+    let max_lon = -9999;
+    let min_lon = 9999;
+    let node;
+    for (let i = 0; i < PATH.length; i++) {
+        node = PATH[i];
+        if (node.lat > max_lat)
+            max_lat = node.lat;
+        if (node.lat < min_lat)
+            min_lat = node.lat;
+        if (node.lon > max_lon)
+            max_lon = node.lon;
+        if (node.lon < min_lon)
+            min_lon = node.lon;
+    }
+    const shift = Math.max((max_lat + min_lat) / 100, (max_lon + min_lon) / 100)
+    max_lon += shift;
+    min_lon -= shift;
+    max_lat += shift;
+    min_lat -= shift;
+    offset_z = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, fastround(scale(max_lon, min_lon, max_lat, min_lat, w_width - 300))));
+    center((max_lon + min_lon) / 2, (max_lat + min_lat) / 2, w_width - 300);
 }, false);
 
 function onClick() {
-    city_a = document.getElementById("a_input").value;
-    city_b = document.getElementById("b_input").value;
+    let temp_city_a = document.getElementById("a_input").value;
+    let temp_city_b = document.getElementById("b_input").value;
 
-    if (Object.keys(CITIES).includes(city_a) && Object.keys(CITIES).includes(city_b)) {
+    if (Object.keys(CITIES).includes(temp_city_a) && Object.keys(CITIES).includes(temp_city_b)) {
+        city_a = temp_city_a;
+        city_b = temp_city_b;
         document.getElementById("sig").innerHTML = "<i>Searching for Path...</i>";
         PATH = [];
         pathWorker.postMessage({
